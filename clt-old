@@ -1,0 +1,62 @@
+#!/bin/bash
+
+# Install macOS Command Line Tools
+
+set -eu
+
+{
+
+command -v xcode-select >/dev/null || exit
+
+CLT="/Library/Developer/CommandLineTools"
+
+[ "${1-}" != 'force' ] || rm -rf "${CLT}"
+
+install() {
+  if ! test -d "${CLT}"; then
+    # This temporary file prompts the 'softwareupdate' utility to list the Command Line Tools
+    clt_placeholder="/tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress"
+    sudo touch "${clt_placeholder}"
+
+    clt_label_command="/usr/sbin/softwareupdate -l |
+                        grep -B 1 -E 'Command Line Tools' |
+                        awk -F'*' '/^ *\\*/ {print \$2}' |
+                        sed -e 's/^ *Label: //' -e 's/^ *//' |
+                        sort -V |
+                        tail -n1"
+
+    clt_run="$(/bin/bash -c "${clt_label_command}")"
+    clt_label="$(printf "%s" "${clt_run/"$'\n'"/}")"
+
+    if [ ! "${clt_label}" ]; then
+      sudo "/usr/sbin/softwareupdate" "-i" "${clt_label}"
+      sudo "/bin/rm" "-f" "${clt_placeholder}"
+      sudo "/usr/bin/xcode-select" "--switch" "${CLT}"
+    fi
+  fi
+
+  # Headless install may have failed, so fallback to original 'xcode-select' method
+  if ! test -d "${CLT}" && test -t 0; then
+    echo "Installing the Command Line Tools (expect a GUI popup):"
+    sudo "/usr/bin/xcode-select" "--install"
+    echo "Press any key when the installation has completed."
+    save_state="$(/bin/stty -g)"
+    /bin/stty raw -echo
+    IFS='' read -r -n 1 -d '' "$@"
+    /bin/stty "${save_state}"
+    sudo "/usr/bin/xcode-select" "--switch" "${CLT}"
+  fi
+}
+
+paths() {
+  value='/usr/local/sbin'; grep -q "${value}" /etc/paths || sudo sed -i .bak "s|/usr/local/bin|${value}\n&|"  /etc/paths
+  value="${CLT}/usr/bin"; grep -q "${value}" /etc/paths || sudo sed -i .bak "s|/usr/local/bin|&\n${value}|" /etc/paths
+  sudo rm -f /etc/paths.bak
+  value="${CLT}/usr/share/man"; grep -q "${value}" /etc/manpaths || sudo sed -i .bak "s|/usr/local/share/man|&\n${value}|" /etc/manpaths
+  sudo rm -f /etc/manpaths.bak
+}
+
+install
+paths
+
+}
