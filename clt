@@ -17,22 +17,8 @@ install() {
     # This temporary file prompts the 'softwareupdate' utility to list the Command Line Tools
     clt_placeholder="/tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress"
     sudo touch "${clt_placeholder}"
-
-    clt_label_command="/usr/sbin/softwareupdate -l |
-                        grep -B 1 -E 'Command Line Tools' |
-                        awk -F'*' '/^ *\\*/ {print \$2}' |
-                        sed -e 's/^ *Label: //' -e 's/^ *//' |
-                        sort -V |
-                        tail -n1"
-
-    clt_run="$(/bin/bash -c "${clt_label_command}")"
-    clt_label="$(printf "%s" "${clt_run/"$'\n'"/}")"
-
-    if [ ! "${clt_label}" ]; then
-      sudo "/usr/sbin/softwareupdate" "-i" "${clt_label}"
-      sudo "/bin/rm" "-f" "${clt_placeholder}"
-      sudo "/usr/bin/xcode-select" "--switch" "${CLT}"
-    fi
+    echo "Command Line Tools: Installing"
+    sudo softwareupdate --install --all --restart
   fi
 
   # Headless install may have failed, so fallback to original 'xcode-select' method
@@ -44,8 +30,16 @@ install() {
     /bin/stty raw -echo
     IFS='' read -r -n 1 -d '' "$@"
     /bin/stty "${save_state}"
-    sudo "/usr/bin/xcode-select" "--switch" "${CLT}"
   fi
+  
+  if test -d "${CLT}"; then
+    sudo "/usr/bin/xcode-select" "--switch" "${CLT}"
+    echo "Command Line Tools: Installed"
+  else 
+    echo "Command Line Tools: Error"
+  fi
+  
+  sudo "/bin/rm" "-f" "${clt_placeholder}"
 }
 
 paths() {
