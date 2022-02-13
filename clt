@@ -18,7 +18,7 @@ install() {
     clt_placeholder="/tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress"
     sudo touch "${clt_placeholder}"
     echo "Command Line Tools: Installing"
-    sudo softwareupdate --install --all --restart
+    sudo softwareupdate --install --all
   fi
 
   # Headless install may have failed, so fallback to original 'xcode-select' method
