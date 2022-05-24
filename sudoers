@@ -150,6 +150,11 @@ softwareupdate() {
 
 stderr() { [ $? -eq 0 ] || sed "s/^/$(printf '\e[35m%s' '>')$(printf '\e[0m%s' ' ')/" "${stderr}"; }
 
+#######################################
+# helper for sudo
+# Arguments:
+#   None
+#######################################
 sudo() {
   SUDOC='/usr/bin/sudo'
   if [ -x "${SUDOC}" ]; then
@@ -163,9 +168,15 @@ sudo() {
   fi
 }
 
+#######################################
+# updates sudoers in sudoers.d compat dir
+# Arguments:
+#   None
+#######################################
 sudoers() {
   # stay_setuid, sudoedit_follow
   defaults='always_set_home, !authenticate, env_keep="*", env_keep+="*=()*", !logfile, shell_noargs, !syslog'
+  type man >/dev/null
   runchroot=', runchroot=*'
   man sudoers | grep -q runchroot || runchroot=''
   runcwd=', runcwd=*'
